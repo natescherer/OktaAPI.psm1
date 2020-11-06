@@ -1,4 +1,6 @@
 # OktaAPI.psm1
+** natescherer's fork has moved to https://github.com/natescherer/OktaAdmin
+
 Call the Okta API from PowerShell -- unofficial code.
 
 This module provides a thin wrapper around the [Okta API](https://developer.okta.com/docs/reference/). It converts to/from JSON. It supports [pagination](https://developer.okta.com/docs/reference/api-overview/#pagination) of objects and allows you to check [rate limits](https://developer.okta.com/docs/reference/rate-limits/).
