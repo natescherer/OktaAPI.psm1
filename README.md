@@ -1,5 +1,5 @@
 # OktaAPI.psm1
-** natescherer's fork has moved to https://github.com/natescherer/OktaAdmin
+**natescherer's fork has moved to https://github.com/natescherer/OktaAdmin**
 
 Call the Okta API from PowerShell -- unofficial code.
 
