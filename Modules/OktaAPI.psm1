@@ -517,37 +517,6 @@ function Get-OktaUsers {
     
 }
 
-function Build-FlatObject {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        $InputObject
-    )
-    $PropertiesToExpand = $InputObject | Get-Member | Where-Object { $_.Definition -like "*PSCustomObject*" }
-    $NormalProperties = $InputObject | Get-Member | Where-Object { ($_.Definition -notlike "*PSCustomObject*") -and ($_.MemberType -eq "NoteProperty") }
-
-    $FlatObject = [PSCustomObject]@{}
-    foreach ($NormalProperty in $NormalProperties) {
-        $FlatObject | Add-Member -MemberType NoteProperty -Name $NormalProperty.Name -Value $InputObject.$($NormalProperty.Name)
-    }
-    foreach ($PropertyToExpand in $PropertiesToExpand) {
-        $ExpandOutput = $InputObject | Select-Object -ExpandProperty $PropertyToExpand.Name
-        $ExpandedProperties = $ExpandOutput | Get-Member | Where-Object { $_.MemberType -eq "NoteProperty" }
-        foreach ($ExpandedProperty in $ExpandedProperties) {
-            $HierarchicalName = $PropertyToExpand.Name + "." + $ExpandedProperty.Name
-            $FlatObject | Add-Member -MemberType NoteProperty -Name $HierarchicalName -Value $ExpandOutput.$($ExpandedProperty.Name)
-        }
-    }
-
-    $RemainingPropertiesToFlatten = $FlatObject | Get-Member | Where-Object { $_.Definition -like "*PSCustomObject*" }
-    if ($RemainingPropertiesToFlatten) {
-        Build-FlatObject -InputObject $FlatObject
-    }
-    else {
-        $FlatObject
-    }
-}
-
 function Set-OktaUser {
     [CmdletBinding()]
     param(
@@ -732,5 +701,36 @@ function Get-Error($_) {
     $responseReader = New-Object System.IO.StreamReader($responseStream)
     $responseContent = $responseReader.ReadToEnd()
     ConvertFrom-Json $responseContent
+}
+
+function Build-FlatObject {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        $InputObject
+    )
+    $PropertiesToExpand = $InputObject | Get-Member | Where-Object { $_.Definition -like "*PSCustomObject*" }
+    $NormalProperties = $InputObject | Get-Member | Where-Object { ($_.Definition -notlike "*PSCustomObject*") -and ($_.MemberType -eq "NoteProperty") }
+
+    $FlatObject = [PSCustomObject]@{}
+    foreach ($NormalProperty in $NormalProperties) {
+        $FlatObject | Add-Member -MemberType NoteProperty -Name $NormalProperty.Name -Value $InputObject.$($NormalProperty.Name)
+    }
+    foreach ($PropertyToExpand in $PropertiesToExpand) {
+        $ExpandOutput = $InputObject | Select-Object -ExpandProperty $PropertyToExpand.Name
+        $ExpandedProperties = $ExpandOutput | Get-Member | Where-Object { $_.MemberType -eq "NoteProperty" }
+        foreach ($ExpandedProperty in $ExpandedProperties) {
+            $HierarchicalName = $PropertyToExpand.Name + "." + $ExpandedProperty.Name
+            $FlatObject | Add-Member -MemberType NoteProperty -Name $HierarchicalName -Value $ExpandOutput.$($ExpandedProperty.Name)
+        }
+    }
+
+    $RemainingPropertiesToFlatten = $FlatObject | Get-Member | Where-Object { $_.Definition -like "*PSCustomObject*" }
+    if ($RemainingPropertiesToFlatten) {
+        Build-FlatObject -InputObject $FlatObject
+    }
+    else {
+        $FlatObject
+    }
 }
 #endregion
