@@ -1,9 +1,9 @@
 # With credit to https://github.com/mbegan/Okta-PSModule
 
 # Script vars.
-$headers = @{}
-$baseUrl = ""
-$userAgent = ""
+$oktaHeaders = @{}
+$oktaBaseUrl = ""
+$oktaUserAgent = ""
 
 # Call Connect-Okta before calling Okta API functions.
 function Connect-Okta {
@@ -14,8 +14,8 @@ function Connect-Okta {
         [Parameter(Mandatory = $true)]
         [string]$baseUrl
     )
-    $script:headers = @{"Authorization" = "SSWS $token"; "Accept" = "application/json"; "Content-Type" = "application/json"}
-    $script:baseUrl = $baseUrl
+    $script:oktaHeaders = @{"Authorization" = "SSWS $token"; "Accept" = "application/json"; "Content-Type" = "application/json"}
+    $script:oktaBaseUrl = $oktaBaseUrl
 
     $module = Get-Module OktaAPI
     $modVer = $module.Version.ToString()
@@ -31,12 +31,21 @@ function Connect-Okta {
         $os = "MacOS"
     }
 
-    $script:userAgent = "okta-api-powershell/$modVer powershell/$psVer $os/$osVer"
-    # $script:userAgent = "OktaAPIWindowsPowerShell/0.1" # Old user agent.
+    $script:oktaUserAgent = "okta-api-powershell/$modVer powershell/$psVer $os/$osVer"
+    # $script:oktaUserAgent = "OktaAPIWindowsPowerShell/0.1" # Old user agent.
     # default: "Mozilla/5.0 (Windows NT; Windows NT 6.3; en-US) WindowsPowerShell/5.1.14409.1012"
 
     # see https://www.codyhosterman.com/2016/06/force-the-invoke-restmethod-powershell-cmdlet-to-use-tls-1-2/
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+    try {
+        Get-OktaUsers "test@test.com" | Out-Null
+    } catch {
+        $script:oktaHeaders = @{}
+        $script:oktaBaseUrl = ""
+        $script:oktaUserAgent = ""
+        throw "Connection not successful. Please verify API token and URL."
+    }
 }
 
 #region Apps - https://developer.okta.com/docs/reference/api/apps
@@ -49,6 +58,8 @@ function New-OktaApp {
         [Parameter(Mandatory = $false)]
         [boolean]$activate = $true
     )
+    Test-OktaConnectionVariables
+
     Invoke-Method POST "/api/v1/apps?activate=$activate" $app
 }
 
@@ -58,6 +69,8 @@ function Get-OktaApp {
         [Parameter(Mandatory = $true)]
         [string]$appid
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/apps/$appid"
 }
 
@@ -73,6 +86,8 @@ function Get-OktaApps {
         [Parameter(Mandatory = $false)]
         [string]$q
     )
+    Test-OktaConnectionVariables
+    
     Invoke-PagedMethod "/api/v1/apps?filter=$filter&limit=$limit&expand=$expand&q=$q"
 }
 
@@ -84,6 +99,8 @@ function Add-OktaAppUser {
         [Parameter(Mandatory = $true)]
         [string]$appuser
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/apps/$appid/users" $appuser
 }
 
@@ -95,6 +112,8 @@ function Get-OktaAppUser {
         [Parameter(Mandatory = $true)]
         [string]$userid
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/apps/$appid/users/$userid"
 }
 
@@ -108,6 +127,8 @@ function Get-OktaAppUsers {
         [Parameter(Mandatory = $false)]
         [string]$q
     )
+    Test-OktaConnectionVariables
+    
     Invoke-PagedMethod "/api/v1/apps/$appid/users?limit=$limit&q=$q"
 }
 
@@ -121,6 +142,8 @@ function Set-OktaAppUser {
         [Parameter(Mandatory = $true)]
         [string]$appuser
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/apps/$appid/users/$userid" $appuser
 }
 
@@ -134,6 +157,8 @@ function Remove-OktaAppUser {
         [Parameter(Mandatory = $false)]
         [boolean]$sendEmail = $false
     )
+    Test-OktaConnectionVariables
+    
     $null = Invoke-Method DELETE "/api/v1/apps/$appid/users/$userid?sendEmail=$sendEmail"
 }
 
@@ -147,6 +172,8 @@ function Add-OktaAppGroup {
         [Parameter(Mandatory = $true)]
         [string]$group
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method PUT "/api/v1/apps/$appid/groups/$groupid" $group
 }
 
@@ -158,6 +185,8 @@ function Get-OktaAppGroups {
         [Parameter(Mandatory = $false)]
         [int]$limit = 20
     )
+    Test-OktaConnectionVariables
+    
     Invoke-PagedMethod "/api/v1/apps/$appid/groups?limit=$limit"
 }
 
@@ -169,6 +198,8 @@ function Remove-OktaAppGroup {
         [Parameter(Mandatory = $true)]
         [string]$groupid
     )
+    Test-OktaConnectionVariables
+    
     $null = Invoke-Method DELETE "/api/v1/apps/$appid/groups/$groupid"
 }
 #endregion
@@ -187,6 +218,8 @@ function Get-OktaEvents {
         [Parameter(Mandatory = $false)]
         [boolean]$paged = $false
     )
+    Test-OktaConnectionVariables
+    
     if ($paged) {
         Invoke-PagedMethod "/api/v1/events?startDate=$startDate&filter=$filter&limit=$limit"
     } else {
@@ -205,6 +238,8 @@ function Get-OktaFactor {
         [Parameter(Mandatory = $true)]
         [string]$factorid
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/users/$userid/factors/$factorid"
 }
 
@@ -214,6 +249,8 @@ function Get-OktaFactors {
         [Parameter(Mandatory = $true)]
         [string]$userid
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/users/$userid/factors"
 }
 
@@ -223,6 +260,8 @@ function Get-OktaFactorsToEnroll {
         [Parameter(Mandatory = $true)]
         [string]$userid
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/users/$userid/factors/catalog"
 }
 
@@ -236,6 +275,8 @@ function Set-OktaFactor {
         [Parameter(Mandatory = $false)]
         [boolean]$activate = $false
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/users/$userid/factors?activate=$activate" $factor
 }
 
@@ -249,6 +290,8 @@ function Enable-OktaFactor {
         [Parameter(Mandatory = $true)]
         [string]$body
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/users/$userid/factors/$factorid/lifecycle/activate" $body
 }
 
@@ -260,6 +303,8 @@ function Remove-OktaFactor {
         [Parameter(Mandatory = $true)]
         [string]$factorid
     )
+    Test-OktaConnectionVariables
+    
     $null = Invoke-Method DELETE "/api/v1/users/$userid/factors/$factorid"
 }
 #endregion
@@ -272,6 +317,8 @@ function New-OktaGroup {
         [Parameter(Mandatory = $true)]
         [string]$group
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/groups" $group
 }
 
@@ -281,6 +328,8 @@ function New-OktaGroupRule {
         [Parameter(Mandatory = $true)]
         [string]$groupRule
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/groups/rules" $groupRule
 }
 
@@ -290,6 +339,8 @@ function Get-OktaGroup {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/groups/$id"
 }
 
@@ -305,6 +356,8 @@ function Get-OktaGroups {
         [Parameter(Mandatory = $false)]
         [string]$paged = $false
     )
+    Test-OktaConnectionVariables
+    
     if ($paged) {
         Invoke-PagedMethod "/api/v1/groups?q=$q&filter=$filter&limit=$limit"
     } else {
@@ -318,6 +371,8 @@ function Remove-OktaGroup {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     $null = Invoke-Method DELETE "/api/v1/groups/$id"
 }
 
@@ -331,6 +386,8 @@ function Get-OktaGroupMember {
         [Parameter(Mandatory = $false)]
         [string]$paged = $false
     )
+    Test-OktaConnectionVariables
+    
     if ($paged) {
         Invoke-PagedMethod "/api/v1/groups/$id/users?limit=$limit"
     } else {
@@ -346,6 +403,8 @@ function Get-OktaGroupApps {
         [Parameter(Mandatory = $false)]
         [int]$limit = 20
     )
+    Test-OktaConnectionVariables
+    
     Invoke-PagedMethod "/api/v1/groups/$id/apps?limit=$limit"
 }
 
@@ -355,6 +414,8 @@ function Get-OktaGroupRules {
         [Parameter(Mandatory = $false)]
         [int]$limit = 50
     )
+    Test-OktaConnectionVariables
+    
     Invoke-PagedMethod "/api/v1/groups/rules?limit=$limit"
 }
 
@@ -364,6 +425,8 @@ function Enable-OktaGroupRule {
         [Parameter(Mandatory = $true)]
         [string]$ruleid
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/groups/rules/$ruleid/lifecycle/activate"
 }
 
@@ -375,6 +438,8 @@ function Add-OktaGroupMember {
         [Parameter(Mandatory = $true)]
         [string]$userid
     )
+    Test-OktaConnectionVariables
+    
     $null = Invoke-Method PUT "/api/v1/groups/$groupid/users/$userid"
 }
 
@@ -386,6 +451,8 @@ function Remove-OktaGroupMember {
         [Parameter(Mandatory = $true)]
         [string]$userid
     )
+    Test-OktaConnectionVariables
+    
     $null = Invoke-Method DELETE "/api/v1/groups/$groupid/users/$userid"
 }
 #endregion
@@ -402,6 +469,8 @@ function Get-OktaIdps {
         [Parameter(Mandatory = $false)]
         [int]$limit = 20
     )
+    Test-OktaConnectionVariables
+    
     Invoke-PagedMethod "/api/v1/idps?q=$q&type=$type&limit=$limit"
 }
 #endregion
@@ -426,6 +495,8 @@ function Get-OktaLogs {
         [Parameter(Mandatory = $false)]
         [boolean]$convert = $true
     )
+    Test-OktaConnectionVariables
+    
     Invoke-PagedMethod "/api/v1/logs?since=$since&until=$until&filter=$filter&q=$q&sortOrder=$sortOrder&limit=$limit" $convert
 }
 #endregion
@@ -438,6 +509,8 @@ function Get-OktaRoles {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/users/$id/roles"
 }
 #endregion
@@ -450,12 +523,16 @@ function New-OktaSchema {
         [Parameter(Mandatory = $true)]
         [string]$schema
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/meta/schemas/user/default" $schema
 }
 
 function Get-OktaSchemas {
     [CmdletBinding()]
     param()
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/meta/schemas/user/default"
 }
 #endregion
@@ -470,6 +547,8 @@ function New-OktaUser {
         [Parameter(Mandatory = $false)]
         [boolean]$activate = $true
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/users?activate=$activate" $user
 }
 
@@ -479,6 +558,8 @@ function Get-OktaUser {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/users/$id"
 }
 
@@ -494,6 +575,8 @@ function Get-OktaUsers {
         [Parameter(Mandatory = $false)]
         [string]$search
     )
+    Test-OktaConnectionVariables
+    
     Invoke-PagedMethod "/api/v1/users?q=$q&filter=$filter&limit=$limit&search=$search"
 }
 
@@ -505,6 +588,8 @@ function Set-OktaUser {
         [Parameter(Mandatory = $true)]
         [string]$user
     )
+    Test-OktaConnectionVariables
+    
     # Only the profile properties specified in the request will be modified when using the POST method.
     Invoke-Method POST "/api/v1/users/$id" $user
 }
@@ -515,6 +600,8 @@ function Get-OktaUserAppLinks {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/users/$id/appLinks"
 }
 
@@ -528,6 +615,8 @@ function Get-OktaUserGroups {
         [Parameter(Mandatory = $true)]
         [boolean]$paged = $false
     )
+    Test-OktaConnectionVariables
+    
     if ($paged) {
         Invoke-PagedMethod "/api/v1/users/$id/groups?limit=$limit"
     } else {
@@ -543,6 +632,8 @@ function Enable-OktaUser {
         [Parameter(Mandatory = $false)]
         [boolean]$sendEmail = $true
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/users/$id/lifecycle/activate?sendEmail=$sendEmail"
 }
 
@@ -552,6 +643,8 @@ function Disable-OktaUser {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     $null = Invoke-Method POST "/api/v1/users/$id/lifecycle/deactivate"
 }
 
@@ -563,6 +656,8 @@ function Set-OktaUserResetPassword {
         [Parameter(Mandatory = $false)]
         [boolean]$sendEmail = $true
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/users/$id/lifecycle/reset_password?sendEmail=$sendEmail"
 }
 
@@ -572,6 +667,8 @@ function Set-OktaUserExpirePassword {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/users/$id/lifecycle/expire_password"
 }
 
@@ -581,6 +678,8 @@ function Set-OktaUserUnlocked {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/users/$id/lifecycle/unlock"
 }
 
@@ -590,6 +689,8 @@ function Remove-OktaUser {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     $null = Invoke-Method DELETE "/api/v1/users/$id"
 }
 #endregion
@@ -602,6 +703,8 @@ function New-OktaZone {
         [Parameter(Mandatory = $true)]
         [string]$zone
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method POST "/api/v1/zones" $zone
 }
 
@@ -611,6 +714,8 @@ function Get-OktaZone {
         [Parameter(Mandatory = $true)]
         [string]$id
     )
+    Test-OktaConnectionVariables
+    
     Invoke-Method GET "/api/v1/zones/$id"
 }
 
@@ -622,6 +727,8 @@ function Get-OktaZones {
         [Parameter(Mandatory = $false)]
         [int]$limit = 20
     )
+    Test-OktaConnectionVariables
+    
     Invoke-PagedMethod "/api/v1/zones?filter=$filter&limit=$limit"
 }
 #endregion
@@ -629,13 +736,13 @@ function Get-OktaZones {
 #region Core functions
 
 function Invoke-Method($method, $path, $body) {
-    $url = $baseUrl + $path
+    $url = $oktaBaseUrl + $path
     if ($body) {
         $jsonBody = $body | ConvertTo-Json -compress -depth 100 # max depth is 100. pipe works better than InputObject
         # from https://stackoverflow.com/questions/15290185/invoke-webrequest-issue-with-special-characters-in-json
         # $jsonBody = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
     }
-    Invoke-RestMethod $url -Method $method -Headers $headers -Body $jsonBody -UserAgent $userAgent -UseBasicParsing
+    Invoke-RestMethod $url -Method $method -Headers $oktaHeaders -Body $jsonBody -UserAgent $oktaUserAgent -UseBasicParsing
 }
 
 function Invoke-PagedMethod($url, $convert = $true) {
@@ -672,11 +779,11 @@ function Invoke-PagedMethod($url, $convert = $true) {
 }
 
 function Invoke-OktaWebRequest($method, $path, $body) {
-    $url = $baseUrl + $path
+    $url = $oktaBaseUrl + $path
     if ($body) {
         $jsonBody = $body | ConvertTo-Json -compress -depth 100
     }
-    $response = Invoke-WebRequest $url -Method $method -Headers $headers -Body $jsonBody -UserAgent $userAgent -UseBasicParsing
+    $response = Invoke-WebRequest $url -Method $method -Headers $oktaHeaders -Body $jsonBody -UserAgent $oktaUserAgent -UseBasicParsing
     @{objects = ConvertFrom-Json $response.content
       response = $response
       limitLimit = [int][string]$response.Headers.'X-Rate-Limit-Limit'
@@ -690,5 +797,11 @@ function Get-Error($_) {
     $responseReader = New-Object System.IO.StreamReader($responseStream)
     $responseContent = $responseReader.ReadToEnd()
     ConvertFrom-Json $responseContent
+}
+
+function Test-OktaConnectionVariables {
+    if (!$oktaHeaders -or !$oktaBaseUrl -or !$oktaUserAgent) {
+        throw "Okta connection information not found. Please run Connect-Okta before running this cmdlet."
+    }
 }
 #endregion
